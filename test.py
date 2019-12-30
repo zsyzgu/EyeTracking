@@ -65,4 +65,3 @@ if __name__ == "__main__":
         output_cnt += 1
         cv2.imwrite('output_data/res_' + str(output_cnt) + '.jpg', anotated_image)
         cv2.imwrite('output_data/raw_' + str(output_cnt) + '.jpg', image)
-    print(np.mean(gaze.estimated_error), np.std(gaze.estimated_error))

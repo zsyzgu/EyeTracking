@@ -21,7 +21,6 @@ class Gaze(object):
         self.eye_right = None
         self.edge_left = None
         self.edge_right = None
-        self.estimated_error = []
         
         self._face_detector = dlib.get_frontal_face_detector()
         cwd = os.path.abspath(os.path.dirname(__file__))
@@ -46,18 +45,9 @@ class Gaze(object):
             gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             self.grad_x = cv2.Sobel(gray_image, cv2.CV_32F, 1, 0)
             self.grad_y = cv2.Sobel(gray_image, cv2.CV_32F, 0, 1)
-            for epoch in range(5):
-                old_left = self.iris_left
-                old_right = self.iris_right
+            for epoch in range(10):
                 self.iris_left, self.radius_left, self.edge_left = self.refine_iris(self.iris_left, self.radius_left, self.eye_left)
                 self.iris_right, self.radius_right, self.edge_right = self.refine_iris(self.iris_right, self.radius_right, self.eye_right)
-                if epoch == 4:
-                    dist = self.dist(old_left, self.iris_left)
-                    if dist < 2:
-                        self.estimated_error.append(dist)
-                    dist = self.dist(old_right, self.iris_right)
-                    if dist < 2:
-                        self.estimated_error.append(dist)
 
     def func_iris_error(self, pts, x0, y0, r0):
         v = lambda x: sum((((e[0] - x[0]) ** 2 + (e[1] - x[1]) ** 2) ** 0.5 - x[2]) ** 2 for e in pts) / len(pts) + 0.1 * ((x[0] - x0) ** 2 + (x[1] - y0) ** 2 + (x[2] - r0) ** 2)
@@ -68,7 +58,7 @@ class Gaze(object):
         grad_y = self.grad_y
         iris_edge_points = []
         cos_25_2 = np.cos(25 / 180.0 * np.pi) ** 2
-        SAMPLES = 50
+        SAMPLES = 100
 
         angles = []
         for angle in range(-90, 270, 1):
