@@ -20,7 +20,7 @@ config.enable_stream(rs.stream.infrared, 1, 1280, 720, rs.format.y8, 6)
 pipeline_profile = pipeline.start(config)
 depth_sensor = pipeline_profile.get_device().query_sensors()[0]
 depth_sensor.set_option(rs.option.laser_power, 0)
-depth_sensor.set_option(rs.option.exposure, 20000)
+depth_sensor.set_option(rs.option.exposure, 25000)
 depth_sensor.set_option(rs.option.gain, 100)
 
 output_cnt = 0
@@ -34,9 +34,9 @@ while True:
     image = np.asanyarray(frame.get_data())
     cv2.imshow('Demo', image)
     
-    output_cnt += 1
-    cv2.imwrite('output_data/raw_' + str(output_cnt) + '.jpg', image)
-
     key = cv2.waitKey(1)
+    if key == ord('r'):
+        output_cnt += 1
+        cv2.imwrite('output_data/__' + str(output_cnt) + '.jpg', image)
     if key == ord('q'):
         break

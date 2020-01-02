@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import os
 from gaze import Gaze
 import time
+from ir_point import IrPoint
+import utils
 
 def annotate_iris(image, center, radius, color=(255, 255, 0)):
     center = (int(center[0]), int(center[1]))
@@ -16,6 +18,14 @@ def annotate_iris(image, center, radius, color=(255, 255, 0)):
     y = center[1]
     cv2.line(image, (x - 5, y), (x + 5, y), color)
     cv2.line(image, (x, y - 5), (x, y + 5), color)
+
+def annotate_ir_point(image, center, color=(255,255,255)):
+    if None != center:
+        center = (int(center[0]), int(center[1]))
+        x = center[0]
+        y = center[1]
+        cv2.line(image, (x - 3, y), (x + 3, y), color)
+        cv2.line(image, (x, y - 3), (x, y + 3), color)
 
 def annotate_eye(image, eye, color = (0, 255, 255)):
     N = len(eye)
@@ -42,13 +52,19 @@ def annotate_image(gaze, image):
         annotate_eye(result, right_eye)
         annotate_iris(result, right_iris, right_radius)
         annotate_edge(result, right_edge)
-    return result
+    caln_ir_point = IrPoint()
+    left_ir_point = caln_ir_point(image, left_iris, left_radius)
+    right_ir_point = caln_ir_point(image, right_iris, right_radius)
+    annotate_ir_point(result, left_ir_point)
+    annotate_ir_point(result, right_ir_point)
+    
+    return result, left_iris, right_iris, left_ir_point, right_ir_point
 
 if __name__ == "__main__":
     '''
     gaze = Gaze()
-    image = cv2.imread('./output_data/raw_13.jpg')
-    anotated_image = annotate_image(gaze, image)
+    image = cv2.imread('./test_data/0_-2_3.jpg')
+    anotated_image, left_iris, right_iris, left_ir_point, right_ir_point = annotate_image(gaze, image)
     cv2.imshow('Demo', anotated_image)
     cv2.waitKey(0)
     '''
@@ -58,10 +74,13 @@ if __name__ == "__main__":
     output_cnt = 0
     for file in files:
         image = cv2.imread(root + file)
-        anotated_image = annotate_image(gaze, image)
-        cv2.imshow('Demo', anotated_image)
-        cv2.waitKey(1)
+        anotated_image, left_iris, right_iris, left_ir_point, right_ir_point = annotate_image(gaze, image)
+        cv2.imshow('Demo', image)
         
         output_cnt += 1
-        cv2.imwrite('output_data/res_' + str(output_cnt) + '.jpg', anotated_image)
-        cv2.imwrite('output_data/raw_' + str(output_cnt) + '.jpg', image)
+        if None != left_ir_point and None != right_ir_point:
+            print(file.split('.')[0], left_iris[0] - left_ir_point[0], left_iris[1] - left_ir_point[1], right_iris[0] - right_ir_point[0], right_iris[1] - right_ir_point[1])
+            cv2.waitKey(1)
+        else:
+            cv2.waitKey(0)
+        cv2.imwrite('output_data/' + file, anotated_image)

@@ -7,6 +7,7 @@ import numpy as np
 from eye import Eye
 from scipy.optimize import minimize
 import random
+import utils
 
 class Gaze(object):
     def __init__(self):
@@ -27,9 +28,6 @@ class Gaze(object):
         model_path = os.path.abspath(os.path.join(cwd, "trained_models/shape_predictor_68_face_landmarks.dat"))
         self._predictor = dlib.shape_predictor(model_path)
 
-    def dist(self, A, B):
-        return ((A[0] - B[0]) ** 2 + (A[1] - B[1]) ** 2) ** 0.5
-
     def refresh(self, image):
         faces = self._face_detector(image)
 
@@ -39,21 +37,23 @@ class Gaze(object):
             self.eye_right = Eye(image, self.get_eye_right())
             eye_center_left = self.eye_left.get_eye_center()
             eye_center_right = self.eye_right.get_eye_center()
-            self.radius_left = self.radius_right = ((eye_center_left[0] - eye_center_right[0]) ** 2 + (eye_center_left[1] - eye_center_right[1]) ** 2) ** 0.5 * 0.1
+            self.radius_left = self.radius_right = ((eye_center_left[0] - eye_center_right[0]) ** 2 + (eye_center_left[1] - eye_center_right[1]) ** 2) ** 0.5 * 0.08
             self.iris_left = self.eye_left.get_iris(self.radius_left)
             self.iris_right = self.eye_right.get_iris(self.radius_right)
             gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             self.grad_x = cv2.Sobel(gray_image, cv2.CV_32F, 1, 0)
             self.grad_y = cv2.Sobel(gray_image, cv2.CV_32F, 0, 1)
             for epoch in range(10):
-                self.iris_left, self.radius_left, self.edge_left = self.refine_iris(self.iris_left, self.radius_left, self.eye_left)
-                self.iris_right, self.radius_right, self.edge_right = self.refine_iris(self.iris_right, self.radius_right, self.eye_right)
+                self.iris_left, self.radius_left, self.edge_left = self.refine_iris(self.iris_left, self.radius_left, self.eye_left, epoch)
+                self.iris_right, self.radius_right, self.edge_right = self.refine_iris(self.iris_right, self.radius_right, self.eye_right, epoch)
 
     def func_iris_error(self, pts, x0, y0, r0):
         v = lambda x: sum((((e[0] - x[0]) ** 2 + (e[1] - x[1]) ** 2) ** 0.5 - x[2]) ** 2 for e in pts) / len(pts) + 0.1 * ((x[0] - x0) ** 2 + (x[1] - y0) ** 2 + (x[2] - r0) ** 2)
         return v
 
-    def refine_iris(self, iris, radius, eye):
+    def refine_iris(self, iris, radius, eye, epoch):
+        lower_r = [50, 70, 70, 80, 80, 80, 90, 90, 90, 90]
+        upper_r = [200, 130, 130, 130, 120, 120, 120, 110, 110, 110, 110]
         grad_x = self.grad_x
         grad_y = self.grad_y
         iris_edge_points = []
@@ -83,7 +83,7 @@ class Gaze(object):
             max_corr = 0
             max_x = 0
             max_y = 0
-            for ratio in range(70, 130, 5):
+            for ratio in range(lower_r[epoch], upper_r[epoch], 5):
                 r = radius * 0.01 * ratio
                 pos_x = int(iris[0] + r * dx)
                 pos_y = int(iris[1] + r * dy)
@@ -102,7 +102,7 @@ class Gaze(object):
         
         dists = []
         for i in range(len(iris_edge_points)):
-            dists.append(self.dist(iris_edge_points[i], iris))
+            dists.append(utils.dist(iris_edge_points[i], iris))
         mean_dist = np.mean(dists)
         std_dist = np.std(dists)
         new_iris_edge = []

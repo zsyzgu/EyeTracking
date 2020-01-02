@@ -4,9 +4,7 @@ import cv2
 import dlib
 import time
 import numpy as np
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
-from numpy.lib.stride_tricks import as_strided
+import utils
 
 class Eye(object):
     def __init__(self, image, eye_points):
@@ -54,23 +52,14 @@ class Eye(object):
                 en = threshold
             else:
                 st = threshold + 1
+        iris_image = self.image_processing(eye_image, st)
         return st
 
-    def convolve2d(self, img, kernel):
-        edge = int(kernel.shape[0]/2)
-        img = np.pad(img, [edge,edge], mode='constant', constant_values=0)
-        sub_shape = tuple(np.subtract(img.shape, kernel.shape) + 1)
-        conv_shape = sub_shape + kernel.shape
-        strides = img.strides + img.strides
-        submatrices = as_strided(img, conv_shape, strides)
-        convolved_mat = np.einsum('ij, klij->kl', kernel, submatrices)
-        return convolved_mat
-
     def get_iris(self, radius):
+        H, W = self.eye_image.shape[:2]
         threshold = self.find_best_threshold()
         _, image = cv2.threshold(self.eye_image, threshold, 1, cv2.THRESH_BINARY)
         image = 1 - image
-        H, W = self.eye_image.shape[:2]
 
         R = int(radius)
         N = 2 * R + 1
@@ -80,7 +69,7 @@ class Eye(object):
                 if ((x - R) ** 2 + (y - R) ** 2 <= R * R):
                     kernel[y, x] = 1
         
-        sum_matrix = self.convolve2d(image, kernel)
+        sum_matrix = utils.convolve2d(image, kernel)
 
         max_sum = 0
         for x in range(W):

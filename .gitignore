@@ -3,7 +3,7 @@ backup/
 output_data/
 test_data/
 trained_models/
-
+result.txt
 
 
 # Byte-compiled / optimized / DLL files
